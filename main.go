@@ -1,7 +1,6 @@
 package main
 
 import (
-    "bufio"
     "fmt"
     "net"
     "os"
@@ -12,7 +11,6 @@ const (
     SERVER_TYPE = "tcp"
     SERVER_HOST = "localhost"
     SERVER_PORT = "8080"
-    SERVER_MSG_LENGTH = 512
 )
 
 func main() {
@@ -24,35 +22,15 @@ func main() {
         os.Exit(1)
     }
 
-    // setup input scanner (fmt.Scanln does exactly opposite of what is says it does. awesome.)
-    input := bufio.NewScanner(os.Stdin)
+    send_channel := make(chan int)
 
-    // start thread to recieve messages on
-    go recieve_messages(server)
+    // start send and receive threads
+    go func() {
+        SendMessages(server)
+        send_channel <- 1
+    }()
+    go ReceiveMessages(server)
 
-    // input loop
-    for {
-        input.Scan()
-
-        // write input to server
-        _, write_error := server.Write(input.Bytes())
-
-        if write_error != nil {
-            fmt.Printf("failed to send data. (error: %s)\n", write_error)
-            os.Exit(1)
-        }
-    }
-}
-
-func recieve_messages(server net.Conn) {
-    for {
-        message := make([]byte, SERVER_MSG_LENGTH)
-        _, read_error := server.Read(message)
-
-        if read_error != nil {
-            fmt.Printf("failed to read message from the server. (error: %s)\n", read_error)
-        }
-
-        fmt.Printf("-> %s\n", message)
-    }
+    // wait for send goroutine to finish
+    <- send_channel
 }
