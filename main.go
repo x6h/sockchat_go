@@ -4,6 +4,7 @@ import (
     "fmt"
     "net"
     "os"
+    "time"
 )
 
 // client settings
@@ -22,15 +23,12 @@ func main() {
         os.Exit(1)
     }
 
-    send_channel := make(chan int)
-
     // start send and receive threads
-    go func() {
-        SendMessages(server)
-        send_channel <- 1
-    }()
+    go SendMessages(server)
     go ReceiveMessages(server)
 
-    // wait for send goroutine to finish
-    <- send_channel
+    // pause main thread until either send or receive thread signals a shutdown
+    for !should_shutdown {
+        time.Sleep(100 * time.Millisecond)
+    }
 }
